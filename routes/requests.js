@@ -13,7 +13,7 @@ const validStatuses = [
 
 router.post("/", async (req, res, next) => {
   try {
-    const { studentName, admissionNumber, requestType, description, department, programme } = req.body;
+    const { studentName, admissionNumber, requestType, description, department, programme, title, course, priority } = req.body;
 
     if (![studentName, admissionNumber, requestType, description].every(
       value => typeof value === "string" && value.trim()
@@ -30,6 +30,9 @@ router.post("/", async (req, res, next) => {
       studentName: studentName.trim(),
       admissionNumber: admissionNumber.trim(),
       requestType: requestType.trim(),
+      title: typeof title === "string" ? title.trim() : "",
+      course: typeof course === "string" ? course.trim() : "",
+      priority: typeof priority === "string" ? priority.trim() : "Medium",
       description: description.trim(),
       department: typeof department === "string" ? department.trim() : "",
       programme: typeof programme === "string" ? programme.trim() : "",
