@@ -1,5 +1,6 @@
 const express = require("express");
 const { readRequests, writeRequests } = require("../database/store");
+const { requireStaff, allowRoles } = require("../middleware/auth");
 const router = express.Router();
 
 const validStatuses = [
@@ -50,8 +51,10 @@ router.post("/", async (req, res, next) => {
   }
 });
 
-// Prototype endpoint: protect this route with staff authentication before public production use.
-router.get("/", async (req, res, next) => {
+// Staff-only request queue.
+router.get("/", requireStaff, allowRoles(
+  "lecturer", "hod", "dean", "academic_registrar", "quality_assurance", "system_admin"
+), async (req, res, next) => {
   try {
     res.json(await readRequests());
   } catch (error) {
@@ -59,6 +62,8 @@ router.get("/", async (req, res, next) => {
   }
 });
 
+// Temporary student lookup for the existing prototype.
+// Do not use real student data until student authentication and ownership checks are added.
 router.get("/student/:admissionNumber", async (req, res, next) => {
   try {
     const requests = await readRequests();
@@ -71,7 +76,7 @@ router.get("/student/:admissionNumber", async (req, res, next) => {
   }
 });
 
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", requireStaff, async (req, res, next) => {
   try {
     const requests = await readRequests();
     const request = requests.find(item => item.id === req.params.id);
@@ -82,7 +87,9 @@ router.get("/:id", async (req, res, next) => {
   }
 });
 
-router.patch("/:id/status", async (req, res, next) => {
+router.patch("/:id/status", requireStaff, allowRoles(
+  "lecturer", "hod", "dean", "academic_registrar", "system_admin"
+), async (req, res, next) => {
   try {
     const { status, note } = req.body;
     if (!validStatuses.includes(status)) {
@@ -99,7 +106,10 @@ router.patch("/:id/status", async (req, res, next) => {
     requests[index].history.push({
       status,
       note: typeof note === "string" ? note.trim() : "",
-      date: now
+      date: now,
+      actionBy: req.staff.id,
+      actionByName: req.staff.fullName,
+      actionByRole: req.staff.role
     });
 
     await writeRequests(requests);
